@@ -17,11 +17,11 @@ Research Question
 
 
 ```{r}
-# Access the dataset in R and review the dataset documentation via the following commands
-install.packages("NHANES")
+#Access the dataset in R and review the dataset documentation via the following commands
+install.packages("NHANES_2.1.0.tgz", repos = NULL, type = "https://cran.rstudio.com/bin/macosx/big-sur-arm64/contrib/4.2/NHANES_2.1.0.tgz")
+library(ggplot2)
 library(NHANES)
 data(NHANES)
-?NHANES
 ```
 
 
