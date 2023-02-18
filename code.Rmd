@@ -1,29 +1,259 @@
 ---
-title: "Untitled"
+title: "Nhanes data analysis"
 output: html_document
 date: "2023-02-17"
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+Nhanes data analysis 
+
+Research Question 
+1. Which gener is more prone to develop higher systolic pressure in the US?
+* H0: There is no difference between male systolic pressure and female systolic pressure.
+* H1: There is a difference between male systolic pressure and female systolic pressure.
+
+2. Do people who drink more regularly have a higher systolic pressure in the US?
+* H0: Alcohol consumption is not associated with systolic pressure. 
+* H1: Alcohol consumption is associated with systolic blood pressure. 
+
+
+```{r}
+# Access the dataset in R and review the dataset documentation via the following commands
+install.packages("NHANES")
+library(NHANES)
+data(NHANES)
+?NHANES
 ```
 
-## R Markdown
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+Data exclusion 
+```{r}
+# excluding people who are under 21 years old, women who are pregnant, and people who have diabetes. 
+older21 <- subset(NHANES, Age >= 21)
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+nopreganant <- subset(older21, PregnantNow == "No" | is.na(PregnantNow))
 
-```{r cars}
-summary(cars)
+nodiabetes <- subset(nopreganant, Diabetes == "No" | is.na(Diabetes))
+
+final_data <- nodiabetes
 ```
 
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
+Descriptive Analysis
+```{r}
+summary(final_data)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r}
+# distribution graph for the blood pressure 
+# Create a histogram of the BPSysAve variable with white background and gray fill color
+ggplot(NHANES, aes(x=BPSysAve)) +
+  geom_histogram(binwidth=5, color="gray", fill="lightgray") +
+  labs(title="Distribution of Systolic Blood Pressure", x="Blood Pressure (mmHg)", y="Frequency") +
+  theme(panel.background = element_rect(fill = "white"),
+                panel.grid.major = element_blank(),
+                panel.grid.minor = element_blank(),
+                axis.line = element_line(colour = "black"))
+
+```
+
+```{r}
+library(car)
+library(ggplot2)
+
+# Fit a linear regression model of log(BPSysAve) against another variable, e.g. Age
+fit <- lm(log(BPSysAve) ~ Age, data=final_data)
+
+# Create a QQ plot of the residuals of the linear regression model
+qq <- qqPlot(resid(fit), main="Normal Q-Q", xlab="Theoretical quantities", ylab="Standardized residuals")
+
+# Modify the theme of the plot to set the background to white and remove the frame
+qq + theme(panel.background = element_rect(fill = "white"),
+           panel.grid.major = element_blank(),
+           panel.grid.minor = element_blank(),
+           axis.line = element_line(color = "white"))
+```
+
+
+```{r}
+sd_of_Age <- sd(final_data$Age)
+print(sd_of_Age)
+
+sd_of_BMI <- sd(final_data$BMI, na.rm = TRUE)
+print(sd_of_BMI)
+```
+
+
+Visualize the blood pressure difference in sex results in a histogram
+```{r}
+# load the ggplot2 package
+library(ggplot2)
+
+# calculate the mean BPSysAve for males and females
+male_mean <- mean(final_data$BPSysAve[final_data$Gender == "male"], na.rm = TRUE)
+female_mean <- mean(final_data$BPSysAve[final_data$Gender == "female"], na.rm = TRUE)
+
+# create a data frame for the mean BPSysAve values
+mean_sex_data <- data.frame(Gender = c("Male", "Female"),
+                        Mean_BPSysAve = c(male_mean, female_mean))
+
+# create the plot with the gray color scheme
+sex_bar <- ggplot(mean_sex_data, aes(x = Gender, y = Mean_BPSysAve, fill = Gender)) + 
+          geom_bar(stat = "identity", color = "white", fill = "lightgray", width = 0.5) +
+          geom_text(aes(label = round(Mean_BPSysAve, 1)), vjust = -0.5) +
+          labs(x = "Gender", y = "Mean Systolic Blood Pressure (mmHg)", title = "Mean systolic blood pressure difference by gender") +
+          theme(panel.background = element_rect(fill = "white"),
+                panel.grid.major = element_blank(),
+                panel.grid.minor = element_blank(),
+                axis.line = element_line(colour = "black"))
+
+# display the plot
+sex_bar
+
+
+```
+
+Visualize the blood pressure difference in race results in a histogram
+```{r}
+# calculate the mean BPSysAve for races
+Black_mean <- mean(final_data$BPSysAve[final_data$Race1 == "Black"], na.rm = TRUE)
+Hispanic_mean <- mean(final_data$BPSysAve[final_data$Race1 == "Hispanic"], na.rm = TRUE)
+Mexican_mean <- mean(final_data$BPSysAve[final_data$Race1 == "Mexican"], na.rm = TRUE)
+White_mean <- mean(final_data$BPSysAve[final_data$Race1 == "White"], na.rm = TRUE)
+Other_mean <- mean(final_data$BPSysAve[final_data$Race1 == "Other"], na.rm = TRUE)
+
+
+# create a data frame for the mean BPSysAve values
+mean_race_data <- data.frame(Race1 = c("Black", "Hispanic", "Mexican", "White", "Other"),
+                        Mean_BPSysAve = c(Black_mean, Hispanic_mean, Mexican_mean, White_mean, Other_mean))
+
+# create the plot with the gray color scheme
+race_bar <- ggplot(mean_race_data, aes(x = Race1, y = Mean_BPSysAve, fill = Race1)) + 
+          geom_bar(stat = "identity", color = "white", fill = "lightgray", width = 0.5) +
+          geom_text(aes(label = round(Mean_BPSysAve, 1)), vjust = -0.5) +
+          labs(x = "Race", y = "Mean Systolic Blood Pressure (mmHg)", title = "Mean systolic blood pressure difference by race") +
+          theme(panel.background = element_rect(fill = "white"),
+                panel.grid.major = element_blank(),
+                panel.grid.minor = element_blank(),
+                axis.line = element_line(colour = "black"))
+
+# display the plot
+race_bar
+```
+
+
+Visualize the blood pressure difference in education results in a histogram
+```{r}
+# calculate the mean BPSysAve for education levels
+eight_mean <- mean(final_data$BPSysAve[final_data$Education == "8th Grade"], na.rm = TRUE)
+nine_eleven_mean <- mean(final_data$BPSysAve[final_data$Education == "9 - 11th Grade"], na.rm = TRUE)
+high_school_mean <- mean(final_data$BPSysAve[final_data$Education == "High School"], na.rm = TRUE)
+some_college_mean <- mean(final_data$BPSysAve[final_data$Education == "Some College"], na.rm = TRUE)
+college_grad_mean <- mean(final_data$BPSysAve[final_data$Education == "College Grad"], na.rm = TRUE)
+
+
+# create a data frame for the mean BPSysAve values
+mean_Education_data <- data.frame(Education = c("8th Grade", "9 - 11th Grade", "High School", "Some College", "College Grad"),
+                        Mean_BPSysAve = c(eight_mean, nine_eleven_mean, high_school_mean, some_college_mean, college_grad_mean))
+
+# create the plot with the gray color scheme
+Education_bar <- ggplot(mean_Education_data, aes(x = Education, y = Mean_BPSysAve, fill = Education)) + 
+          geom_bar(stat = "identity", color = "white", fill = "lightgray", width = 0.5) +
+          geom_text(aes(label = round(Mean_BPSysAve, 1)), vjust = -0.5) +
+          labs(x = "Education level", y = "Mean Systolic Blood Pressure (mmHg)", title = "Mean systolic blood pressure difference by education level") +
+          theme(panel.background = element_rect(fill = "white"),
+                panel.grid.major = element_blank(),
+                panel.grid.minor = element_blank(),
+                axis.line = element_line(colour = "black"))
+
+# display the plot
+Education_bar
+```
+
+
+Visualize the blood pressure difference in income results in a histogram
+```{r}
+# calculate the mean BPSysAve for income levels 
+two_mean <- mean(final_data$BPSysAve[final_data$HHIncome == "25000-34999"], na.rm = TRUE)
+three_mean <- mean(final_data$BPSysAve[final_data$HHIncome == "35000-44999"], na.rm = TRUE)
+four_mean <- mean(final_data$BPSysAve[final_data$HHIncome == "45000-54999"], na.rm = TRUE)
+seven_mean <- mean(final_data$BPSysAve[final_data$HHIncome == "75000-99999"], na.rm = TRUE)
+more_mean <- mean(final_data$BPSysAve[final_data$HHIncome == "more 99999"], na.rm = TRUE)
+
+
+# create a data frame for the mean BPSysAve values
+mean_income_data <- data.frame(HHIncome = c("25000-34999", "35000-44999", "45000-54999","75000-99999", "more 99999"),
+                        Mean_BPSysAve = c(two_mean, three_mean, four_mean,seven_mean, more_mean))
+
+# create the plot with the gray color scheme
+income_bar <- ggplot(mean_income_data, aes(x = HHIncome, y = Mean_BPSysAve, fill = HHIncome)) + 
+          geom_bar(stat = "identity", color = "white", fill = "lightgray", width = 0.5) +
+          geom_text(aes(label = round(Mean_BPSysAve, 1)), vjust = -0.5) +
+          labs(x = "Annual income($)", y = "Mean Systolic Blood Pressure (mmHg)", title = "Mean systolic blood pressure difference by income") +
+          theme(panel.background = element_rect(fill = "white"),
+                panel.grid.major = element_blank(),
+                panel.grid.minor = element_blank(),
+                axis.line = element_line(colour = "black"))
+
+# display the plot
+income_bar
+```
+
+
+Visualize the blood pressure difference in marital status in a histogram
+```{r}
+# calculate the mean BPSysAve for males and females
+Divorced_mean <- mean(final_data$BPSysAve[final_data$MaritalStatus == "Divorced"], na.rm = TRUE)
+LivePartner_mean <- mean(final_data$BPSysAve[final_data$MaritalStatus == "LivePartner"], na.rm = TRUE)
+Married_mean <- mean(final_data$BPSysAve[final_data$MaritalStatus == "Married"], na.rm = TRUE)
+NeverMarried_mean <- mean(final_data$BPSysAve[final_data$MaritalStatus == "NeverMarried"], na.rm = TRUE)
+Separated_mean <- mean(final_data$BPSysAve[final_data$MaritalStatus == "Separated"], na.rm = TRUE)
+Widowed_mean <- mean(final_data$BPSysAve[final_data$MaritalStatus == "Widowed"], na.rm = TRUE)
+
+
+# create a data frame for the mean BPSysAve values
+mean_marital_data <- data.frame(MaritalStatus = c("Divorced", "LivePartner", "Married","NeverMarried", "Separated", "Widowed"),
+                        Mean_BPSysAve = c(Divorced_mean, LivePartner_mean, Married_mean,NeverMarried_mean, Separated_mean, Widowed_mean))
+
+# create the plot with the gray color scheme
+marital_bar <- ggplot(mean_marital_data, aes(x = MaritalStatus, y = Mean_BPSysAve, fill = MaritalStatus)) + 
+          geom_bar(stat = "identity", color = "white", fill = "lightgray", width = 0.5) +
+          geom_text(aes(label = round(Mean_BPSysAve, 1)), vjust = -0.5) +
+          labs(x = "Marital status", y = "Mean Systolic Blood Pressure (mmHg)", title = "Mean systolic blood pressure difference by marital status") +
+          theme(panel.background = element_rect(fill = "white"),
+                panel.grid.major = element_blank(),
+                panel.grid.minor = element_blank(),
+                axis.line = element_line(colour = "black"))
+
+# display the plot
+marital_bar
+```
+
+
+aim 1: 
+```{r}
+t.test(final_data$BPSysAve[final_data$Gender=="male"],final_data$BPSysAve[final_data$Gender=="female"])
+```
+
+```{r}
+# Subset the data by gender
+male_bpsys <- final_data$BPSysAve[final_data$Gender == "male"]
+female_bpsys <- final_data$BPSysAve[final_data$Gender == "female"]
+
+# Perform t-test
+ttest <- t.test(male_bpsys, female_bpsys)
+
+# Create box plot
+boxplot(male_bpsys, female_bpsys, names = c("Male", "Female"), ylab = "BPSysAve")
+
+# Add text to the plot to show the t-test results
+text(x = 1.5, y = max(c(male_bpsys, female_bpsys)) - 10, 
+     labels = paste("p-value = ", signif(ttest$p.value, 3)), pos = 3)
+
+```
+
+
+
+
+
+
+
+
