@@ -23,9 +23,9 @@ Project aims
 
 Data set
 National Health and Nutrition Examiniation Survey (NHANES)
-    - 75 variables
-    - 10,000 subjects
-    - Collected between 2009 - 2012 
+- 75 variables
+- 10,000 subjects
+- Collected between 2009 - 2012 
 
 
 Acess: in Rstudio
