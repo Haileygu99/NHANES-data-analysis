@@ -3,18 +3,7 @@ title: "Nhanes data analysis"
 output: html_document
 date: "2023-02-17"
 ---
-
 Nhanes data analysis 
-
-Research Question 
-1. Which gener is more prone to develop higher systolic pressure in the US?
-* H0: There is no difference between male systolic pressure and female systolic pressure.
-* H1: There is a difference between male systolic pressure and female systolic pressure.
-
-2. Do people who drink more regularly have a higher systolic pressure in the US?
-* H0: Alcohol consumption is not associated with systolic pressure. 
-* H1: Alcohol consumption is associated with systolic blood pressure. 
-
 
 ```{r}
 #Access the dataset in R and review the dataset documentation via the following commands
@@ -251,6 +240,146 @@ text(x = 1.5, y = max(c(male_bpsys, female_bpsys)) - 10,
 ```
 
 
+```{r}
+summary(final_data)
+```
+
+```{r}
+# load necessary libraries 
+library(tidyverse)
+
+# Conduct linear regression with alcohol consumption and systolic blood pressure
+model <- lm(BPSysAve ~ AlcoholYear, data = final_data)
+
+# Print model summary
+summary(model)
+
+# Test whether regression coefficient for alcohol consumption is significantly different from zero
+coef_test <- coef(summary(model))["AlcoholYear", "Pr(>|t|)"]
+if (coef_test < 0.05) {
+  print("The regression coefficient for alcohol consumption is significantly different from zero.")
+} else {
+  print("There is no significant association between alcohol consumption and systolic blood pressure.")
+}
+
+
+```
+
+
+```{r}
+# Conduct linear regression with alcohol consumption and systolic blood pressure
+model1 <- lm(BPSysAve ~ AlcoholYear + Gender + Age + BMI + MaritalStatus + HHIncome +Education + Race1, data = final_data)
+
+# Print model summary
+summary(model1)
+```
+
+```{r}
+# Extract the coefficients and standard errors from the model fit summary
+coefs <- coef(model1)
+se <- sqrt(diag(vcov(model1)))
+
+print(coefs)
+print(se)
+```
+
+```{r}
+# calculate the CIs 
+ci <- confint(model1)
+print(ci)
+```
+
+
+```{r}
+estimates_df <- data.frame(predictor = names(coefs),
+                    estimates = coefs,
+                    lower = ci[, 1],
+                    upper = ci[, 2])
+
+library(dplyr)
+
+# Create a named vector of new labels
+estimates_df$predictor[estimates_df$predictor == "Gendermale"] <- "Gender: male"
+estimates_df$predictor[estimates_df$predictor == "AlcoholYear"] <- "Alcohol consumption year"
+estimates_df$predictor[estimates_df$predictor == "MaritalStatusMarried"] <- "Marital status: married"
+estimates_df$predictor[estimates_df$predictor == "MaritalStatusNeverMarried"] <- "Marital status: never married"
+estimates_df$predictor[estimates_df$predictor == "MaritalStatusDivorced"] <- "Marital status: divorced"
+estimates_df$predictor[estimates_df$predictor == "Race1Hispanic"] <- "Race: Hispanic"
+estimates_df$predictor[estimates_df$predictor == "Race1White"] <- "Race: White"
+estimates_df$predictor[estimates_df$predictor == "Race1Other"] <- "Race: Othe"
+estimates_df$predictor[estimates_df$predictor == "Race1Mexican"] <- "Race: Mexican"
+estimates_df$predictor[estimates_df$predictor == "Education9 - 11th Grade"] <- "Education: 9-11th grade"
+estimates_df$predictor[estimates_df$predictor == "Education8th Grade"] <- "Education: 8th grade"
+estimates_df$predictor[estimates_df$predictor == "EducationHigh School"] <- "Education: High school"
+estimates_df$predictor[estimates_df$predictor == "EducationSome College"] <- "Education: Some college"
+estimates_df$predictor[estimates_df$predictor == "EducationCollege Grad"] <- "Education: College grad"
+estimates_df$predictor[estimates_df$predictor == "HHIncome35000-44999"] <- "Income: 35 -< 45k"
+estimates_df$predictor[estimates_df$predictor == "HHIncome45000-54999"] <- "Income: 45 -< 55k"
+estimates_df$predictor[estimates_df$predictor == "HHIncome55000-64999"] <- "Income: 55 -< 65k"
+estimates_df$predictor[estimates_df$predictor == "HHIncome65000-74999"] <- "Income: 65 -< 75k"
+estimates_df$predictor[estimates_df$predictor == "HHIncome75000-99999"] <- "Income: 75 -< 100k"
+estimates_df$predictor[estimates_df$predictor == "HHIncomemore 99999"] <- "Income: >- 100K"
+
+print(estimates_df)
+
+estimates_df <- estimates_df[-c(5,8,9,10,11,12,13,14), ]
+
+print(estimates_df)
+
+```
+
+
+
+```{r}
+ggplot(estimates_df, aes(y = predictor, x = estimates, xmin = lower, xmax = upper)) +
+  geom_pointrange() +
+  labs(x = "Estimates (95% CI)", y = "") + 
+  geom_vline(xintercept = 0, linetype = "dashed", alpha = 0.5) +
+  theme_classic() +
+  annotate("text", x = .8, y = 6.4, label = "") + 
+  annotate("text", x = 1.2, y = 6.4, label = "") +
+  annotate("text", x = 2, y = 6.8, label = "")
+```
+
+
+
+
+
+
+```{r}
+# Create a new column in the dataframe to store the sign of the estimates
+estimates_df$sign <- ifelse(estimates_df$estimates < 0, "negative", "positive")
+# Define colors for negative and positive estimates
+colors <- c("negative" = "red", "positive" = "blue")
+# Create the plot with color-coded lines
+ggplot(estimates_df, aes(y = predictor, x = estimates, xmin = lower, xmax = upper, color = sign)) +
+  geom_pointrange() +
+  geom_linerange(aes(x = lower, xend = upper), size = 1) +
+  labs(x = "Estimates (95% CI)", y = "") + 
+  geom_vline(xintercept = 0, linetype = "dashed", alpha = 0.5, color = "blue") +
+  scale_color_manual(values = colors) +
+  theme_classic()
+
+```
+
+
+
+scatter plot
+```{r}
+# fit the linear model
+model2 <- lm(BPSysAve ~ AlcoholYear + Age + Gender + BMI, data = final_data)
+
+df <- data.frame(fitted.values = model2$fitted.values, residuals = model2$residuals)
+print(df)
+# create a new empty plot
+plot.new()
+# Create the residuals vs fitted values plot
+plot(residuals ~ fitted.values, data = df, type = "p", xlab = "Fitted Values", ylab = "Residuals", main = "Residuals vs Fitted Values")
+# Add a reference line
+abline(h = 0, lty = 2, col = "red")
+
+
+```
 
 
 
